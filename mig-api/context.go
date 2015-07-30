@@ -47,6 +47,9 @@ type Context struct {
 		Path string
 		r    *geo.Reader
 	}
+	Manifest struct {
+		Path string
+	}
 	Logging mig.Logging
 }
 
