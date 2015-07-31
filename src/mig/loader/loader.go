@@ -12,11 +12,19 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"github.com/jvehent/cljs"
+	"io/ioutil"
 	"mig"
+	"net/http"
+	"net/url"
 	"os"
 	"runtime"
+	"strings"
 )
+
+var apiManifest *mig.ManifestResponse
 
 func initializeHaveBundle() ([]mig.BundleDictionaryEntry, error) {
 	ret, err := mig.GetHostBundle()
@@ -34,6 +42,61 @@ func initializeHaveBundle() ([]mig.BundleDictionaryEntry, error) {
 	return ret, nil
 }
 
+func requestManifest() error {
+	murl := APIURL + "manifest"
+	fmt.Fprintf(os.Stderr, "requestManifest() -> requesting manifest from %v\n", murl)
+
+	mparam := mig.ManifestParameters{}
+	mparam.OS = runtime.GOOS
+	mparam.Arch = runtime.GOARCH
+	mparam.Operator = TAGS.Operator
+	buf, err := json.Marshal(mparam)
+	if err != nil {
+		return err
+	}
+	mstring := string(buf)
+	data := url.Values{"parameters": {mstring}}
+	r, err := http.NewRequest("POST", murl, strings.NewReader(data.Encode()))
+	if err != nil {
+		return err
+	}
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	client := http.Client{}
+	resp, err := client.Do(r)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	var resource *cljs.Resource
+	err = json.Unmarshal(body, &resource)
+	if err != nil {
+		return err
+	}
+
+	// Extract our manifest from the response.
+	manifest, err := valueToManifest(resource.Collection.Items[0].Data[0].Value)
+	if err != nil {
+		return err
+	}
+	apiManifest = &manifest
+
+	return nil
+}
+
+func valueToManifest(v interface{}) (m mig.ManifestResponse, err error) {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return
+	}
+	err = json.Unmarshal(b, &m)
+	return
+}
+
 func main() {
 	runtime.GOMAXPROCS(1)
 
@@ -45,4 +108,9 @@ func main() {
 	}
 
 	// Retrieve our manifest from the API.
+	err = requestManifest()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "main() -> %v\n", err)
+		os.Exit(1)
+	}
 }
