@@ -20,6 +20,7 @@ import (
 	"path"
 )
 
+// API entry point used to request a file be sent to the loader from the API.
 func getManifestFile(respWriter http.ResponseWriter, request *http.Request) {
 	loc := fmt.Sprintf("%s%s", ctx.Server.Host, request.URL.String())
 	opid := getOpID(request)
@@ -65,7 +66,6 @@ func getManifestFile(respWriter http.ResponseWriter, request *http.Request) {
 	}
 
 	filepath := path.Join(root, "files", mentry.Name)
-
 	buf, err := loadContent(filepath, mentry.SHA256)
 	if err != nil {
 		panic(err)
