@@ -125,7 +125,9 @@ func loadContent(path string, sig string) ([]byte, error) {
 }
 
 // This API entry point is used by the loader to request a manifest file that
-// indicates the most current version of the agent to be used.
+// indicates the most current version of the agent to be used. The loader
+// sends some basic information in the request parameters so the API can decide
+// which manifest to send the loader.
 func getAgentManifest(respWriter http.ResponseWriter, request *http.Request) {
 	loc := fmt.Sprintf("%s%s", ctx.Server.Host, request.URL.String())
 	opid := getOpID(request)
@@ -154,7 +156,7 @@ func getAgentManifest(respWriter http.ResponseWriter, request *http.Request) {
 	}
 	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Received manifest request")}.Debug()
 
-	m, err := getManifestResponse(manifestParam)
+	_, m, err := manifestRoot(manifestParam)
 	if err != nil {
 		panic(err)
 	}
@@ -191,6 +193,9 @@ func manifestLoad(path string) (mig.ManifestResponse, error) {
 }
 
 func manifestRoot(p mig.ManifestParameters) (string, mig.ManifestResponse, error) {
+	// Construct the path to the manifest using the parameters supplied by
+	// the client. These should be validated to be safe via
+	// ManifestParameters.Validate().
 	proot := path.Join(ctx.Manifest.Path, p.Operator, p.Arch, p.OS)
 	psecondary := path.Join(ctx.Manifest.Path, "default", p.Arch, p.OS)
 	primary := path.Join(proot, "manifest.json")
@@ -204,26 +209,4 @@ func manifestRoot(p mig.ManifestParameters) (string, mig.ManifestResponse, error
 		return psecondary, m, nil
 	}
 	return "", mig.ManifestResponse{}, fmt.Errorf("unable to locate manifest")
-}
-
-func getManifestResponse(p mig.ManifestParameters) (mig.ManifestResponse, error) {
-	ret := mig.ManifestResponse{}
-	// Construct the path to the manifest using the parameters supplied by
-	// the client. These should be validated to be safe via
-	// ManifestParameters.Validate().
-	primary := path.Join(ctx.Manifest.Path, p.Operator, p.Arch, p.OS, "manifest.json")
-	secondary := path.Join(ctx.Manifest.Path, "default", p.Arch, p.OS, "manifest.json")
-	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Primary: %v", primary)}.Debug()
-	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Secondary: %v", secondary)}.Debug()
-
-	m, err := manifestLoad(primary)
-	if err != nil {
-		// Try to load the secondary manifest, if this doesn't work
-		// either give up.
-		m, err = manifestLoad(secondary)
-		if err != nil {
-			return ret, fmt.Errorf("unable to locate manifest")
-		}
-	}
-	return m, nil
 }
