@@ -14,9 +14,11 @@ package main
 import (
 	"bytes"
 	"compress/gzip"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"github.com/jvehent/cljs"
+	"io"
 	"io/ioutil"
 	"mig"
 	"net/http"
@@ -166,10 +168,55 @@ func fetchFile(n string) ([]byte, error) {
 
 func fetchAndReplace(entry mig.BundleDictionaryEntry, sig string) error {
 	// Grab the new file from the API.
-	_, err := fetchFile(entry.Name)
+	filebuf, err := fetchFile(entry.Name)
 	if err != nil {
 		return err
 	}
+
+	// Stage the new file. Write the file recieved from the API to the
+	// file system and validate the signature of the new file to make
+	// sure it matches the signature from the manifest.
+	//
+	// Append .loader to the file name to use as the staged file path.
+	reppath := entry.Path + ".loader"
+	fd, err := os.OpenFile(reppath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0700)
+	if err != nil {
+		return err
+	}
+	_, err = fd.Write(filebuf)
+	if err != nil {
+		return err
+	}
+	fd.Close()
+
+	// Validate the signature on the new file.
+	h := sha256.New()
+	fd, err = os.Open(reppath)
+	if err != nil {
+		return err
+	}
+	buf := make([]byte, 4096)
+	for {
+		n, err := fd.Read(buf)
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			fd.Close()
+			return err
+		}
+		if n > 0 {
+			h.Write(buf[:n])
+		}
+	}
+	fd.Close()
+	if sig != fmt.Sprintf("%x", h.Sum(nil)) {
+		return fmt.Errorf("staged file signature mismatch")
+	}
+
+	// Got this far, OK to proceed with the replacement.
+	err = os.Rename(reppath, entry.Path)
+
 	return nil
 }
 
