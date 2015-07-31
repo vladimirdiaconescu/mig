@@ -86,7 +86,7 @@ func GetHostBundle() ([]BundleDictionaryEntry, error) {
 	case "linux":
 		return bundleEntryLinux, nil
 	}
-	return nil, fmt.Errorf("GetHostBundle() -> no entry for %v in bundle dictionary", runtime.GOOS)
+	return nil, fmt.Errorf("no entry for %v in bundle dictionary", runtime.GOOS)
 }
 
 func HashBundle(b []BundleDictionaryEntry) ([]BundleDictionaryEntry, error) {
