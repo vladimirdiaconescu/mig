@@ -85,6 +85,7 @@ func main() {
 	s.HandleFunc("/investigator/update/", authenticate(updateInvestigator)).Methods("POST")
 	s.HandleFunc("/dashboard", authenticate(getDashboard)).Methods("GET")
 	s.HandleFunc("/manifest", getAgentManifest).Methods("POST")
+	s.HandleFunc("/manifest/fetch", getManifestFile).Methods("POST")
 
 	ctx.Channels.Log <- mig.Log{Desc: "Starting HTTP handler"}
 

@@ -97,11 +97,49 @@ func valueToManifest(v interface{}) (m mig.ManifestResponse, err error) {
 	return
 }
 
+func checkEntry(entry mig.BundleDictionaryEntry) error {
+	var compare mig.ManifestEntry
+	fmt.Fprintf(os.Stderr, "checkEntry() -> Comparing %v %v\n", entry.Name, entry.Path)
+	found := false
+	for _, x := range apiManifest.Entries {
+		if x.Name == entry.Name {
+			compare = x
+			found = true
+			break
+		}
+	}
+	if !found {
+		fmt.Fprintf(os.Stderr, "checkEntry() -> entry not in manifest, ignoring\n")
+		return nil
+	}
+	fmt.Fprintf(os.Stderr, "checkEntry() -> We have %v\n", entry.SHA256)
+	fmt.Fprintf(os.Stderr, "checkEntry() -> API has %v\n", compare.SHA256)
+	if entry.SHA256 == compare.SHA256 {
+		fmt.Fprintf(os.Stderr, "checkEntry() -> Nothing to do here...\n")
+		//return nil
+	}
+	fmt.Fprintf(os.Stderr, "checkEntry() -> refreshing %v\n", entry.Name)
+	return nil
+}
+
+// Compare the manifest that the API sent with our knowledge of what is
+// currently installed. For each case there is a difference, we will
+// request the new file and replace the existing entry.
+func compareManifest(have []mig.BundleDictionaryEntry) error {
+	for _, x := range have {
+		err := checkEntry(x)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func main() {
 	runtime.GOMAXPROCS(1)
 
 	// Get our current status from the file system.
-	_, err := initializeHaveBundle()
+	have, err := initializeHaveBundle()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "main() -> %v\n", err)
 		os.Exit(1)
@@ -109,6 +147,12 @@ func main() {
 
 	// Retrieve our manifest from the API.
 	err = requestManifest()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "main() -> %v\n", err)
+		os.Exit(1)
+	}
+
+	err = compareManifest(have)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "main() -> %v\n", err)
 		os.Exit(1)

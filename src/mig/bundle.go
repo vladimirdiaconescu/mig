@@ -23,6 +23,7 @@ type ManifestParameters struct {
 	Operator string `json:"operator"` // Agent operator
 	OS       string `json:"os"`       // Operating system
 	Arch     string `json:"arch"`     // Architecture
+	Object   string `json:"object"`   // Object being requested
 }
 
 func (m *ManifestParameters) Validate() error {
@@ -38,6 +39,17 @@ func (m *ManifestParameters) Validate() error {
 	}
 
 	return nil
+}
+
+func (m *ManifestParameters) ValidateFetch() error {
+	if m.Object == "" {
+		return fmt.Errorf("manifest fetch with no object")
+	}
+	return m.Validate()
+}
+
+type ManifestFetchResponse struct {
+	Data []byte `json:"data"`
 }
 
 type ManifestResponse struct {
