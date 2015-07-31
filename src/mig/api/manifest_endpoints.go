@@ -46,10 +46,22 @@ func getAgentManifest(respWriter http.ResponseWriter, request *http.Request) {
 	}
 	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Received manifest request")}.Debug()
 
-	_, err = getManifestResponse(manifestParam)
+	m, err := getManifestResponse(manifestParam)
 	if err != nil {
 		panic(err)
 	}
+	err = resource.AddItem(cljs.Item{
+		Href: request.URL.String(),
+		Data: []cljs.Data{
+			{
+				Name:  "manifest",
+				Value: m,
+			},
+		}})
+	if err != nil {
+		panic(err)
+	}
+	respond(200, resource, respWriter, request)
 }
 
 func manifestLoad(path string) (mig.ManifestResponse, error) {
