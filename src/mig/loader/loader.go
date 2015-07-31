@@ -12,6 +12,8 @@
 package main
 
 import (
+	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
 	"github.com/jvehent/cljs"
@@ -97,6 +99,80 @@ func valueToManifest(v interface{}) (m mig.ManifestResponse, err error) {
 	return
 }
 
+func valueToFetchResponse(v interface{}) (m mig.ManifestFetchResponse, err error) {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return
+	}
+	err = json.Unmarshal(b, &m)
+	return
+}
+
+func fetchFile(n string) ([]byte, error) {
+	murl := APIURL + "manifest/fetch"
+
+	mparam := mig.ManifestParameters{}
+	mparam.OS = runtime.GOOS
+	mparam.Arch = runtime.GOARCH
+	mparam.Operator = TAGS.Operator
+	mparam.Object = n
+	buf, err := json.Marshal(mparam)
+	if err != nil {
+		return nil, err
+	}
+	mstring := string(buf)
+	data := url.Values{"parameters": {mstring}}
+	r, err := http.NewRequest("POST", murl, strings.NewReader(data.Encode()))
+	if err != nil {
+		return nil, err
+	}
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	client := http.Client{}
+	resp, err := client.Do(r)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var resource *cljs.Resource
+	err = json.Unmarshal(body, &resource)
+	if err != nil {
+		return nil, err
+	}
+
+	// Extract fetch response.
+	fetchresp, err := valueToFetchResponse(resource.Collection.Items[0].Data[0].Value)
+	if err != nil {
+		return nil, err
+	}
+
+	// Decompress the returned file and return it as a byte slice.
+	b := bytes.NewBuffer(fetchresp.Data)
+	gz, err := gzip.NewReader(b)
+	if err != nil {
+		return nil, err
+	}
+	ret, err := ioutil.ReadAll(gz)
+	if err != nil {
+		return nil, err
+	}
+
+	return ret, nil
+}
+
+func fetchAndReplace(entry mig.BundleDictionaryEntry, sig string) error {
+	// Grab the new file from the API.
+	_, err := fetchFile(entry.Name)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func checkEntry(entry mig.BundleDictionaryEntry) error {
 	var compare mig.ManifestEntry
 	fmt.Fprintf(os.Stderr, "checkEntry() -> Comparing %v %v\n", entry.Name, entry.Path)
@@ -119,6 +195,10 @@ func checkEntry(entry mig.BundleDictionaryEntry) error {
 		//return nil
 	}
 	fmt.Fprintf(os.Stderr, "checkEntry() -> refreshing %v\n", entry.Name)
+	err := fetchAndReplace(entry, compare.SHA256)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
