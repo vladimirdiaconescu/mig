@@ -88,8 +88,8 @@ func getManifestFile(respWriter http.ResponseWriter, request *http.Request) {
 }
 
 // Load the file from the file system, we also compress it and return a byte
-// slice. We also validate the SHA256 sum of the file against the sum that
-// was specified in the manifest to ensure we are sending the correct data.
+// slice. Validate the SHA256 sum of the file against the sum that was
+// specified in the manifest to ensure we are sending the correct data.
 func loadContent(path string, sig string) ([]byte, error) {
 	fd, err := os.Open(path)
 	if err != nil {
@@ -107,11 +107,17 @@ func loadContent(path string, sig string) ([]byte, error) {
 				break
 			}
 			fd.Close()
+			gz.Close()
 			return nil, err
 		}
 		if n > 0 {
 			h.Write(buf[:n])
-			gz.Write(buf[:n])
+			_, err = gz.Write(buf[:n])
+			if err != nil {
+				fd.Close()
+				gz.Close()
+				return nil, err
+			}
 		}
 	}
 	fd.Close()
