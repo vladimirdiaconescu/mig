@@ -27,16 +27,18 @@ func getManifestFile(respWriter http.ResponseWriter, request *http.Request) {
 	resource := cljs.New(loc)
 	defer func() {
 		if e := recover(); e != nil {
-			ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("%v", e)}.Err()
+			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
 			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("%v", e)})
 			respond(500, resource, respWriter, request)
 		}
-		ctx.Channels.Log <- mig.Log{Desc: "leaving getManifestFile()"}.Debug()
+		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving getManifestFile()"}.Debug()
 	}()
 	err := request.ParseMultipartForm(20480)
 	if err != nil {
 		panic(err)
 	}
+
+	ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("Received manifest file request")}.Debug()
 
 	var manifestParam mig.ManifestParameters
 	err = json.Unmarshal([]byte(request.FormValue("parameters")), &manifestParam)
@@ -140,11 +142,11 @@ func getAgentManifest(respWriter http.ResponseWriter, request *http.Request) {
 	resource := cljs.New(loc)
 	defer func() {
 		if e := recover(); e != nil {
-			ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("%v", e)}.Err()
+			ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("%v", e)}.Err()
 			resource.SetError(cljs.Error{Code: fmt.Sprintf("%.0f", opid), Message: fmt.Sprintf("%v", e)})
 			respond(500, resource, respWriter, request)
 		}
-		ctx.Channels.Log <- mig.Log{Desc: "leaving getAgentManifest()"}.Debug()
+		ctx.Channels.Log <- mig.Log{OpID: opid, Desc: "leaving getAgentManifest()"}.Debug()
 	}()
 	err := request.ParseMultipartForm(20480)
 	if err != nil {
@@ -160,7 +162,7 @@ func getAgentManifest(respWriter http.ResponseWriter, request *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Received manifest request")}.Debug()
+	ctx.Channels.Log <- mig.Log{OpID: opid, Desc: fmt.Sprintf("Received manifest request")}.Debug()
 
 	_, m, err := manifestRoot(manifestParam)
 	if err != nil {
