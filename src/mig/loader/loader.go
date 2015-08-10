@@ -291,7 +291,7 @@ func checkEntry(entry mig.BundleDictionaryEntry) (err error) {
 	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("they have %v", compare.SHA256)}
 	if entry.SHA256 == compare.SHA256 {
 		ctx.Channels.Log <- mig.Log{Desc: "nothing to do here"}
-		//return
+		return
 	}
 	haveChanges = true
 	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("refreshing %v", entry.Name)}

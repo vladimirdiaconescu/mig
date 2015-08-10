@@ -66,6 +66,7 @@ func main() {
 	var query = flag.String("q", "somequery", "Send query to the agent's socket, print response to stdout and exit.")
 	var foreground = flag.Bool("f", false, "Agent will fork into background by default. Except if this flag is set.")
 	var upgrading = flag.Bool("u", false, "Used while upgrading an agent, means that this agent is started by another agent.")
+	var serviceInstall = flag.Bool("s", false, "Do not run agent, instead just install agent as a service.")
 	var pretty = flag.Bool("p", false, "When running a module, pretty print the results instead of returning JSON.")
 	var showversion = flag.Bool("V", false, "Print Agent version to stdout and exit.")
 	flag.Parse()
@@ -134,7 +135,7 @@ func main() {
 	// run the agent in the correct mode. the default is to call a module.
 	switch *mode {
 	case "agent":
-		err = runAgent(*foreground, *upgrading, *debug)
+		err = runAgent(*foreground, *upgrading, *debug, *serviceInstall)
 		if err != nil {
 			panic(err)
 		}
@@ -190,7 +191,7 @@ func runModuleDirectly(mode string, args []byte, pretty bool) (out string) {
 func runAgentCheckin(foreground, upgrading, debug bool) (err error) {
 	var ctx Context
 	// initialize the agent
-	ctx, err = Init(foreground, upgrading)
+	ctx, err = Init(foreground, upgrading, false)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Init failed: '%v'", err)
 		os.Exit(0)
@@ -244,13 +245,17 @@ done:
 
 // runAgent is the startup function for agent mode. It only exits when the agent
 // must shut down.
-func runAgent(foreground, upgrading, debug bool) (err error) {
+//
+// The serviceInstall flag indicates this is an attempt to install the agent as
+// a service, but not run it. This flag could replace the upgrading flag at
+// some point.
+func runAgent(foreground, upgrading, debug bool, serviceInstall bool) (err error) {
 	var (
 		ctx        Context
 		exitReason string
 	)
 	// initialize the agent
-	ctx, err = Init(foreground, upgrading)
+	ctx, err = Init(foreground, upgrading, serviceInstall)
 	if err != nil {
 		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("Init failed: '%v'", err)}.Err()
 		if debug {
