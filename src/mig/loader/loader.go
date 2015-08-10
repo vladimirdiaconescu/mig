@@ -29,6 +29,7 @@ import (
 )
 
 var ctx Context
+var haveChanges bool
 var apiManifest *mig.ManifestResponse
 
 func initializeHaveBundle() (ret []mig.BundleDictionaryEntry, err error) {
@@ -288,8 +289,9 @@ func checkEntry(entry mig.BundleDictionaryEntry) (err error) {
 	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("they have %v", compare.SHA256)}
 	if entry.SHA256 == compare.SHA256 {
 		ctx.Channels.Log <- mig.Log{Desc: "nothing to do here"}
-		return
+		//return
 	}
+	haveChanges = true
 	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("refreshing %v", entry.Name)}
 	err = fetchAndReplace(entry, compare.SHA256)
 	if err != nil {
@@ -376,5 +378,13 @@ func main() {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
+	}
+
+	if haveChanges {
+		err = runTriggers()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+			os.Exit(1)
+		}
 	}
 }
