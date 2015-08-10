@@ -53,7 +53,11 @@ func requestManifest() error {
 	mparam := mig.ManifestParameters{}
 	mparam.OS = runtime.GOOS
 	mparam.Arch = runtime.GOARCH
-	mparam.Operator = TAGS.Operator
+	if TAGS.Operator == "" {
+		mparam.Operator = "default"
+	} else {
+		mparam.Operator = TAGS.Operator
+	}
 	buf, err := json.Marshal(mparam)
 	if err != nil {
 		return err
