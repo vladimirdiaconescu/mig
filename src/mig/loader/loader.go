@@ -280,11 +280,15 @@ func checkEntry(entry mig.BundleDictionaryEntry) (err error) {
 		ctx.Channels.Log <- mig.Log{Desc: "entry not in API manifest, ignoring"}
 		return
 	}
-	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("we have %v", entry.SHA256)}
+	hv := entry.SHA256
+	if hv == "" {
+		hv = "not found"
+	}
+	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("we have %v", hv)}
 	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("they have %v", compare.SHA256)}
 	if entry.SHA256 == compare.SHA256 {
 		ctx.Channels.Log <- mig.Log{Desc: "nothing to do here"}
-		//return
+		return
 	}
 	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("refreshing %v", entry.Name)}
 	err = fetchAndReplace(entry, compare.SHA256)
