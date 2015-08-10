@@ -26,11 +26,13 @@ import (
 	"os"
 	"runtime"
 	"strings"
+	"sync"
 )
 
 var ctx Context
 var haveChanges bool
 var apiManifest *mig.ManifestResponse
+var wg sync.WaitGroup
 
 func initializeHaveBundle() (ret []mig.BundleDictionaryEntry, err error) {
 	defer func() {
@@ -336,6 +338,12 @@ func initContext() (ctx Context, err error) {
 	return
 }
 
+func doExit(v int) {
+	close(ctx.Channels.Log)
+	wg.Wait()
+	os.Exit(v)
+}
+
 func main() {
 	var err error
 	runtime.GOMAXPROCS(1)
@@ -346,6 +354,7 @@ func main() {
 		os.Exit(1)
 	}
 
+	wg.Add(1)
 	go func() {
 		var stop bool
 		for event := range ctx.Channels.Log {
@@ -357,6 +366,7 @@ func main() {
 				break
 			}
 		}
+		wg.Done()
 	}()
 	ctx.Channels.Log <- mig.Log{Desc: "logging routine started"}
 
@@ -364,27 +374,28 @@ func main() {
 	have, err := initializeHaveBundle()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(1)
+		doExit(1)
 	}
 
 	// Retrieve our manifest from the API.
 	err = requestManifest()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(1)
+		doExit(1)
 	}
 
 	err = compareManifest(have)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(1)
+		doExit(1)
 	}
 
 	if haveChanges {
 		err = runTriggers()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%v\n", err)
-			os.Exit(1)
+			doExit(1)
 		}
 	}
+	doExit(0)
 }

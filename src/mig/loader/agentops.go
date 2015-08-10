@@ -24,7 +24,7 @@ func runTriggers() (err error) {
 		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("%v (ignored)", err)}
 	}
 	// XXX Run agent service initialization here.
-	return
+	return nil
 }
 
 // Terminate any running agent on the system.
