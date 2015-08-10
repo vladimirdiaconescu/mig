@@ -28,27 +28,44 @@ import (
 	"strings"
 )
 
+var ctx Context
 var apiManifest *mig.ManifestResponse
 
-func initializeHaveBundle() ([]mig.BundleDictionaryEntry, error) {
-	ret, err := mig.GetHostBundle()
+func initializeHaveBundle() (ret []mig.BundleDictionaryEntry, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("initializeHaveBundle() -> %v", e)
+		}
+	}()
+
+	ret, err = mig.GetHostBundle()
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 	ret, err = mig.HashBundle(ret)
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
-	fmt.Fprintf(os.Stderr, "initializeHaveBundle() -> Initialized\n")
+	ctx.Channels.Log <- mig.Log{Desc: "initialized local bundle information"}
 	for _, x := range ret {
-		fmt.Fprintf(os.Stderr, "%v %v -> %v\n", x.Name, x.Path, x.SHA256)
+		hv := x.SHA256
+		if hv == "" {
+			hv = "not found"
+		}
+		ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("%v %v -> %v", x.Name, x.Path, hv)}
 	}
-	return ret, nil
+	return
 }
 
-func requestManifest() error {
+func requestManifest() (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("requestManifest() -> %v", e)
+		}
+	}()
+
 	murl := APIURL + "manifest"
-	fmt.Fprintf(os.Stderr, "requestManifest() -> requesting manifest from %v\n", murl)
+	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("requesting manifest from %v", murl)}
 
 	mparam := mig.ManifestParameters{}
 	mparam.OS = runtime.GOOS
@@ -60,40 +77,39 @@ func requestManifest() error {
 	}
 	buf, err := json.Marshal(mparam)
 	if err != nil {
-		return err
+		panic(err)
 	}
 	mstring := string(buf)
 	data := url.Values{"parameters": {mstring}}
 	r, err := http.NewRequest("POST", murl, strings.NewReader(data.Encode()))
 	if err != nil {
-		return err
+		panic(err)
 	}
 	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	client := http.Client{}
 	resp, err := client.Do(r)
 	if err != nil {
-		return err
+		panic(err)
 	}
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return err
+		panic(err)
 	}
 
 	var resource *cljs.Resource
 	err = json.Unmarshal(body, &resource)
 	if err != nil {
-		return err
+		panic(err)
 	}
 
 	// Extract our manifest from the response.
 	manifest, err := valueToManifest(resource.Collection.Items[0].Data[0].Value)
 	if err != nil {
-		return err
+		panic(err)
 	}
 	apiManifest = &manifest
-
-	return nil
+	return
 }
 
 func valueToManifest(v interface{}) (m mig.ManifestResponse, err error) {
@@ -114,67 +130,82 @@ func valueToFetchResponse(v interface{}) (m mig.ManifestFetchResponse, err error
 	return
 }
 
-func fetchFile(n string) ([]byte, error) {
+func fetchFile(n string) (ret []byte, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("fetchFile() -> %v", e)
+		}
+	}()
+
 	murl := APIURL + "manifest/fetch"
 
+	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("fetching file from %v", murl)}
 	mparam := mig.ManifestParameters{}
 	mparam.OS = runtime.GOOS
 	mparam.Arch = runtime.GOARCH
 	mparam.Operator = TAGS.Operator
+	if mparam.Operator == "" {
+		mparam.Operator = "default"
+	}
 	mparam.Object = n
 	buf, err := json.Marshal(mparam)
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 	mstring := string(buf)
 	data := url.Values{"parameters": {mstring}}
 	r, err := http.NewRequest("POST", murl, strings.NewReader(data.Encode()))
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	client := http.Client{}
 	resp, err := client.Do(r)
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 
 	var resource *cljs.Resource
 	err = json.Unmarshal(body, &resource)
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 
 	// Extract fetch response.
 	fetchresp, err := valueToFetchResponse(resource.Collection.Items[0].Data[0].Value)
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 
 	// Decompress the returned file and return it as a byte slice.
 	b := bytes.NewBuffer(fetchresp.Data)
 	gz, err := gzip.NewReader(b)
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
-	ret, err := ioutil.ReadAll(gz)
+	ret, err = ioutil.ReadAll(gz)
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
-
-	return ret, nil
+	return
 }
 
-func fetchAndReplace(entry mig.BundleDictionaryEntry, sig string) error {
+func fetchAndReplace(entry mig.BundleDictionaryEntry, sig string) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("fetchAndReplace() -> %v", e)
+		}
+	}()
+
 	// Grab the new file from the API.
 	filebuf, err := fetchFile(entry.Name)
 	if err != nil {
-		return err
+		panic(err)
 	}
 
 	// Stage the new file. Write the file recieved from the API to the
@@ -185,19 +216,20 @@ func fetchAndReplace(entry mig.BundleDictionaryEntry, sig string) error {
 	reppath := entry.Path + ".loader"
 	fd, err := os.OpenFile(reppath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0700)
 	if err != nil {
-		return err
+		panic(err)
 	}
 	_, err = fd.Write(filebuf)
 	if err != nil {
-		return err
+		panic(err)
 	}
 	fd.Close()
 
 	// Validate the signature on the new file.
+	ctx.Channels.Log <- mig.Log{Desc: "validating staged file signature"}
 	h := sha256.New()
 	fd, err = os.Open(reppath)
 	if err != nil {
-		return err
+		panic(err)
 	}
 	buf := make([]byte, 4096)
 	for {
@@ -207,7 +239,7 @@ func fetchAndReplace(entry mig.BundleDictionaryEntry, sig string) error {
 				break
 			}
 			fd.Close()
-			return err
+			panic(err)
 		}
 		if n > 0 {
 			h.Write(buf[:n])
@@ -215,18 +247,27 @@ func fetchAndReplace(entry mig.BundleDictionaryEntry, sig string) error {
 	}
 	fd.Close()
 	if sig != fmt.Sprintf("%x", h.Sum(nil)) {
-		return fmt.Errorf("staged file signature mismatch")
+		panic("staged file signature mismatch")
 	}
 
 	// Got this far, OK to proceed with the replacement.
+	ctx.Channels.Log <- mig.Log{Desc: "installing staged file"}
 	err = os.Rename(reppath, entry.Path)
-
-	return nil
+	if err != nil {
+		panic(err)
+	}
+	return
 }
 
-func checkEntry(entry mig.BundleDictionaryEntry) error {
+func checkEntry(entry mig.BundleDictionaryEntry) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("checkEntry() -> %v", e)
+		}
+	}()
+
 	var compare mig.ManifestEntry
-	fmt.Fprintf(os.Stderr, "checkEntry() -> Comparing %v %v\n", entry.Name, entry.Path)
+	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("comparing %v %v", entry.Name, entry.Path)}
 	found := false
 	for _, x := range apiManifest.Entries {
 		if x.Name == entry.Name {
@@ -236,56 +277,100 @@ func checkEntry(entry mig.BundleDictionaryEntry) error {
 		}
 	}
 	if !found {
-		fmt.Fprintf(os.Stderr, "checkEntry() -> entry not in manifest, ignoring\n")
-		return nil
+		ctx.Channels.Log <- mig.Log{Desc: "entry not in API manifest, ignoring"}
+		return
 	}
-	fmt.Fprintf(os.Stderr, "checkEntry() -> We have %v\n", entry.SHA256)
-	fmt.Fprintf(os.Stderr, "checkEntry() -> API has %v\n", compare.SHA256)
+	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("we have %v", entry.SHA256)}
+	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("they have %v", compare.SHA256)}
 	if entry.SHA256 == compare.SHA256 {
-		fmt.Fprintf(os.Stderr, "checkEntry() -> Nothing to do here...\n")
-		//return nil
+		ctx.Channels.Log <- mig.Log{Desc: "nothing to do here"}
+		//return
 	}
-	fmt.Fprintf(os.Stderr, "checkEntry() -> refreshing %v\n", entry.Name)
-	err := fetchAndReplace(entry, compare.SHA256)
+	ctx.Channels.Log <- mig.Log{Desc: fmt.Sprintf("refreshing %v", entry.Name)}
+	err = fetchAndReplace(entry, compare.SHA256)
 	if err != nil {
-		return err
+		panic(err)
 	}
-	return nil
+	return
 }
 
 // Compare the manifest that the API sent with our knowledge of what is
 // currently installed. For each case there is a difference, we will
 // request the new file and replace the existing entry.
-func compareManifest(have []mig.BundleDictionaryEntry) error {
+func compareManifest(have []mig.BundleDictionaryEntry) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("compareManifest() -> %v", e)
+		}
+	}()
+
 	for _, x := range have {
 		err := checkEntry(x)
 		if err != nil {
-			return err
+			panic(err)
 		}
 	}
-	return nil
+	return
+}
+
+func initContext() (ctx Context, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("initContext() -> %v", e)
+		}
+	}()
+
+	ctx.Channels.Log = make(chan mig.Log, 37)
+	ctx.Logging.Level = "debug"
+	ctx.Logging.Mode = "stdout"
+	ctx.Logging, err = mig.InitLogger(ctx.Logging, "mig-loader")
+	if err != nil {
+		panic(err)
+	}
+	return
 }
 
 func main() {
+	var err error
 	runtime.GOMAXPROCS(1)
+
+	ctx, err = initContext()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		os.Exit(1)
+	}
+
+	go func() {
+		var stop bool
+		for event := range ctx.Channels.Log {
+			stop, err = mig.ProcessLog(ctx.Logging, event)
+			if err != nil {
+				panic("unable to process log")
+			}
+			if stop {
+				break
+			}
+		}
+	}()
+	ctx.Channels.Log <- mig.Log{Desc: "logging routine started"}
 
 	// Get our current status from the file system.
 	have, err := initializeHaveBundle()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "main() -> %v\n", err)
+		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
 
 	// Retrieve our manifest from the API.
 	err = requestManifest()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "main() -> %v\n", err)
+		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
 
 	err = compareManifest(have)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "main() -> %v\n", err)
+		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
 }
