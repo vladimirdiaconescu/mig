@@ -7,7 +7,7 @@
 package main
 
 import (
-	"mig"
+	"mig.ninja/mig"
 )
 
 type Context struct {

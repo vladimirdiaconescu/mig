@@ -8,7 +8,7 @@ package main
 
 import (
 	"fmt"
-	"mig"
+	"mig.ninja/mig"
 	"os/exec"
 )
 

@@ -3,7 +3,8 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 //
 // Contributor: Aaron Meihm ameihm@mozilla.com [:alm]
-package mig
+
+package mig /* import "mig.ninja/mig" */
 
 // This file contains structures and functions related to the handling of
 // manifests and state bundles by the MIG loader and API.

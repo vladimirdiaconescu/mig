@@ -20,7 +20,7 @@ import (
 	"github.com/jvehent/cljs"
 	"io"
 	"io/ioutil"
-	"mig"
+	"mig.ninja/mig"
 	"net/http"
 	"net/url"
 	"os"
