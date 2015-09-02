@@ -72,8 +72,10 @@ mig-action-generator: create-bindir
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-action-generator $(GOLDFLAGS) mig.ninja/mig/client/mig-action-generator
 
 mig-loader: create-bindir
-	#if [ ! -r $(AGTCONF) ]; then echo "$(AGTCONF) configuration file is missing" ; exit 1; fi
-	#cp $(AGTCONF) src/mig/loader/configuration.go
+	if [ ! -r $(AGTCONF) ]; then echo "$(AGTCONF) configuration file does not exist" ; exit 1; fi
+	# test if the agent configuration variable contains something different than the default value
+	# and if so, replace the link to the default configuration with the provided configuration
+	if [ $(AGTCONF) != "conf/mig-agent-conf.go.inc" ]; then rm mig-loader/configuration.go; cp $(AGTCONF) mig-loader/configuration.go; fi
 	$(GO) build $(GOOPTS) -o $(BINDIR)/mig-loader $(GOLDFLAGS) mig.ninja/mig/mig-loader
 
 mig-action-verifier: create-bindir
