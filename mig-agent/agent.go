@@ -220,6 +220,31 @@ func runModuleDirectly(mode string, paramargs interface{}, pretty bool) (out str
 	}
 	// instantiate and call module
 	run := modules.Available[mode].NewRun()
+	jail("clone",
+		"close",
+		"connect",
+		"epoll_create1",
+		"epoll_ctl",
+		"epoll_wait",
+		"exit_group",
+		"exit",
+		"futex",
+		"getpeername",
+		"getsockname",
+		"getsockopt",
+		"mmap",
+		"mprotect",
+		"nanosleep",
+		"openat",
+		"read",
+		"rt_sigprocmask",
+		"rt_sigreturn",
+		"sched_yield",
+		"select",
+		"setsockopt",
+		//"socket",
+		"stat",
+		"write")
 	out = run.Run(infd)
 	if pretty {
 		var modres modules.Result
