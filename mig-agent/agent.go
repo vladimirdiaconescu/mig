@@ -17,7 +17,8 @@ import (
 	"strings"
 	"sync"
 	"time"
-
+	"syscall"
+	
 	"github.com/jvehent/service-go"
 	"github.com/streadway/amqp"
 	"mig.ninja/mig"
@@ -161,6 +162,8 @@ func runModuleDirectly(mode string, args []byte, pretty bool) (out string) {
 		return fmt.Sprintf(`{"errors": ["module '%s' is not available"]}`, mode)
 	}
 	// instanciate and call module
+	veryLongTempName := syscall.NsecToTimespec(1000000)
+	syscall.Nanosleep(&veryLongTempName, nil)
 	run := modules.Available[mode].NewRun()
 	out = run.Run(os.Stdin)
 	if pretty {
