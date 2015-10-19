@@ -23,6 +23,8 @@ import (
 	"github.com/streadway/amqp"
 	"mig.ninja/mig"
 	"mig.ninja/mig/modules"
+	"github.com/seccomp/libseccomp-golang"
+	"log"
 )
 
 // publication lock is used to prevent publication when the channels are not
@@ -155,13 +157,73 @@ func main() {
 	}
 exit:
 }
+func jail(calls ...string) {
+	filter, err := seccomp.NewFilter(seccomp.ActKill)
+	if err != nil {
+		log.Fatal("Error creating filter: %s\n", err)
+	} else {
+		log.Printf("Created filter\n")
+	}
+	defer filter.Release()
+	action, err := filter.GetDefaultAction()
+	if err != nil {
+		log.Fatal("Error getting default action of filter\n")
+	} else if action != seccomp.ActKill {
+		log.Printf("Default action of filter was set incorrectly!\n")
+	}
+	for _, call_name := range calls {
+		call, err := seccomp.GetSyscallFromName(call_name)
+		if err != nil {
+		log.Fatal("Error getting syscall number of %s: %s\n", call_name, err)
+		} else {
+		log.Printf("Got hook to syscall %d\n", call)
+		}
 
+		err = filter.AddRule(call, seccomp.ActAllow)
+		if err != nil {
+		log.Fatal("Error adding rule to restrict syscall: %s\n", err)
+		} else {
+		log.Printf("Added rule to restrict syscall open\n")
+		}
+	}
+	//filter.SetTsync(true)
+	//filter.SetNoNewPrivsBit(true)
+	err = filter.Load()
+	if err != nil {
+		log.Fatal("Error loading filter: %s", err)
+	} else {
+		log.Printf("Loaded filter\n")
+	}
+}
 // runModuleDirectly executes a module and displays the results on stdout
 func runModuleDirectly(mode string, args []byte, pretty bool) (out string) {
 	if _, ok := modules.Available[mode]; !ok {
 		return fmt.Sprintf(`{"errors": ["module '%s' is not available"]}`, mode)
 	}
 	// instanciate and call module
+	jail("clone",
+		"close",
+		"connect",
+		"epoll_create1",
+		"epoll_ctl",
+		"epoll_wait",
+		"exit_group",
+		"futex",
+		"getpeername",
+		"getsockname",
+		"getsockopt",
+		"mmap",
+		"mprotect",
+		"nanosleep",
+		"openat",
+		"read",
+		"rt_sigprocmask",
+		"sched_yield",
+		"select",
+		"setsockopt",
+		"socket",
+		"stat",
+		"write")
 	veryLongTempName := syscall.NsecToTimespec(1000000)
 	syscall.Nanosleep(&veryLongTempName, nil)
 	run := modules.Available[mode].NewRun()
