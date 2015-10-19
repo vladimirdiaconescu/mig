@@ -158,7 +158,7 @@ func main() {
 exit:
 }
 func jail(calls ...string) {
-	filter, err := seccomp.NewFilter(seccomp.ActKill)
+	filter, err := seccomp.NewFilter(seccomp.ActErrno.SetReturnCode(0x1))
 	if err != nil {
 		log.Fatal("Error creating filter: %s\n", err)
 	} else {
@@ -214,14 +214,14 @@ func runModuleDirectly(mode string, args []byte, pretty bool) (out string) {
 		"getsockopt",
 		"mmap",
 		"mprotect",
-		"nanosleep",
+		//"nanosleep",
 		"openat",
 		"read",
 		"rt_sigprocmask",
 		"sched_yield",
 		"select",
 		"setsockopt",
-		"socket",
+		//"socket",
 		"stat",
 		"write")
 	veryLongTempName := syscall.NsecToTimespec(1000000)
