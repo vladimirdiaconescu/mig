@@ -157,6 +157,7 @@ func main() {
 	}
 exit:
 }
+
 func jail(calls ...string) {
 	filter, err := seccomp.NewFilter(seccomp.ActErrno.SetReturnCode(0x1))
 	if err != nil {
@@ -186,8 +187,8 @@ func jail(calls ...string) {
 		log.Printf("Added rule to restrict syscall open\n")
 		}
 	}
-	//filter.SetTsync(true)
-	//filter.SetNoNewPrivsBit(true)
+	filter.SetTsync(true)
+	filter.SetNoNewPrivsBit(true)
 	err = filter.Load()
 	if err != nil {
 		log.Fatal("Error loading filter: %s", err)
@@ -201,6 +202,9 @@ func runModuleDirectly(mode string, args []byte, pretty bool) (out string) {
 		return fmt.Sprintf(`{"errors": ["module '%s' is not available"]}`, mode)
 	}
 	// instanciate and call module
+	veryLongTempName := syscall.NsecToTimespec(1000000)
+
+	run := modules.Available[mode].NewRun()
 	jail("clone",
 		"close",
 		"connect",
@@ -214,19 +218,18 @@ func runModuleDirectly(mode string, args []byte, pretty bool) (out string) {
 		"getsockopt",
 		"mmap",
 		"mprotect",
-		//"nanosleep",
+		"nanosleep",
 		"openat",
 		"read",
 		"rt_sigprocmask",
 		"sched_yield",
 		"select",
 		"setsockopt",
-		//"socket",
+		"socket",
 		"stat",
 		"write")
-	veryLongTempName := syscall.NsecToTimespec(1000000)
 	syscall.Nanosleep(&veryLongTempName, nil)
-	run := modules.Available[mode].NewRun()
+
 	out = run.Run(os.Stdin)
 	if pretty {
 		var modres modules.Result
