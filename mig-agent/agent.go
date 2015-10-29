@@ -13,6 +13,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"os/signal"
 	"runtime"
 	"strings"
 	"sync"
@@ -158,8 +159,25 @@ func main() {
 exit:
 }
 
+func catchJailViolation(ready chan bool) {
+
+	c := make(chan os.Signal, 10)
+	signal.Reset()
+	signal.Notify(c, syscall.SIGSYS)
+	ready <- true
+	log.Println("setting up trap")
+	// Block until a signal is received.
+	s := <-c
+
+	log.Println("Got signal:", s)
+	os.Exit(1)
+}
+
 func jail(calls ...string) {
-	filter, err := seccomp.NewFilter(seccomp.ActErrno.SetReturnCode(0x1))
+
+	c := make(chan bool)
+	go catchJailViolation(c)
+	filter, err := seccomp.NewFilter(seccomp.ActTrap);
 	if err != nil {
 		log.Fatal("Error creating filter: %s\n", err)
 	} else {
@@ -169,7 +187,7 @@ func jail(calls ...string) {
 	action, err := filter.GetDefaultAction()
 	if err != nil {
 		log.Fatal("Error getting default action of filter\n")
-	} else if action != seccomp.ActKill {
+	} else if action != seccomp.ActTrap {
 		log.Printf("Default action of filter was set incorrectly!\n")
 	}
 	for _, call_name := range calls {
@@ -189,6 +207,7 @@ func jail(calls ...string) {
 	}
 	filter.SetTsync(true)
 	filter.SetNoNewPrivsBit(true)
+	<- c
 	err = filter.Load()
 	if err != nil {
 		log.Fatal("Error loading filter: %s", err)
@@ -196,13 +215,13 @@ func jail(calls ...string) {
 		log.Printf("Loaded filter\n")
 	}
 }
+
 // runModuleDirectly executes a module and displays the results on stdout
 func runModuleDirectly(mode string, args []byte, pretty bool) (out string) {
 	if _, ok := modules.Available[mode]; !ok {
 		return fmt.Sprintf(`{"errors": ["module '%s' is not available"]}`, mode)
 	}
 	// instanciate and call module
-	veryLongTempName := syscall.NsecToTimespec(1000000)
 
 	run := modules.Available[mode].NewRun()
 	jail("clone",
@@ -225,10 +244,10 @@ func runModuleDirectly(mode string, args []byte, pretty bool) (out string) {
 		"sched_yield",
 		"select",
 		"setsockopt",
-		"socket",
+		//"socket",
 		"stat",
 		"write")
-	syscall.Nanosleep(&veryLongTempName, nil)
+
 
 	out = run.Run(os.Stdin)
 	if pretty {
