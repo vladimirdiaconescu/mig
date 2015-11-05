@@ -13,19 +13,15 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"os/signal"
 	"runtime"
 	"strings"
 	"sync"
 	"time"
-	"syscall"
-	
+
 	"github.com/jvehent/service-go"
 	"github.com/streadway/amqp"
 	"mig.ninja/mig"
 	"mig.ninja/mig/modules"
-	"github.com/seccomp/libseccomp-golang"
-	"log"
 )
 
 // publication lock is used to prevent publication when the channels are not
@@ -159,62 +155,7 @@ func main() {
 exit:
 }
 
-func catchJailViolation(ready chan bool) {
 
-	c := make(chan os.Signal, 10)
-	signal.Reset()
-	signal.Notify(c, syscall.SIGSYS)
-	ready <- true
-	log.Println("setting up trap")
-	// Block until a signal is received.
-	s := <-c
-
-	log.Println("Got signal:", s)
-	os.Exit(1)
-}
-
-func jail(calls ...string) {
-
-	c := make(chan bool)
-	go catchJailViolation(c)
-	filter, err := seccomp.NewFilter(seccomp.ActTrap);
-	if err != nil {
-		log.Fatal("Error creating filter: %s\n", err)
-	} else {
-		log.Printf("Created filter\n")
-	}
-	defer filter.Release()
-	action, err := filter.GetDefaultAction()
-	if err != nil {
-		log.Fatal("Error getting default action of filter\n")
-	} else if action != seccomp.ActTrap {
-		log.Printf("Default action of filter was set incorrectly!\n")
-	}
-	for _, call_name := range calls {
-		call, err := seccomp.GetSyscallFromName(call_name)
-		if err != nil {
-		log.Fatal("Error getting syscall number of %s: %s\n", call_name, err)
-		} else {
-		log.Printf("Got hook to syscall %d\n", call)
-		}
-
-		err = filter.AddRule(call, seccomp.ActAllow)
-		if err != nil {
-		log.Fatal("Error adding rule to restrict syscall: %s\n", err)
-		} else {
-		log.Printf("Added rule to restrict syscall open\n")
-		}
-	}
-	filter.SetTsync(true)
-	filter.SetNoNewPrivsBit(true)
-	<- c
-	err = filter.Load()
-	if err != nil {
-		log.Fatal("Error loading filter: %s", err)
-	} else {
-		log.Printf("Loaded filter\n")
-	}
-}
 
 // runModuleDirectly executes a module and displays the results on stdout
 func runModuleDirectly(mode string, args []byte, pretty bool) (out string) {
@@ -231,6 +172,7 @@ func runModuleDirectly(mode string, args []byte, pretty bool) (out string) {
 		"epoll_ctl",
 		"epoll_wait",
 		"exit_group",
+		"exit",
 		"futex",
 		"getpeername",
 		"getsockname",
@@ -241,6 +183,7 @@ func runModuleDirectly(mode string, args []byte, pretty bool) (out string) {
 		"openat",
 		"read",
 		"rt_sigprocmask",
+		"rt_sigreturn",
 		"sched_yield",
 		"select",
 		"setsockopt",
