@@ -155,15 +155,12 @@ func main() {
 exit:
 }
 
-
-
 // runModuleDirectly executes a module and displays the results on stdout
 func runModuleDirectly(mode string, args []byte, pretty bool) (out string) {
 	if _, ok := modules.Available[mode]; !ok {
 		return fmt.Sprintf(`{"errors": ["module '%s' is not available"]}`, mode)
 	}
 	// instanciate and call module
-
 	run := modules.Available[mode].NewRun()
 	jail("clone",
 		"close",
