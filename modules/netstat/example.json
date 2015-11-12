@@ -1,0 +1,11 @@
+{
+    "sandboxprofile": {
+        "default": "ActKill",
+        "filters": [
+        {
+            "filteron": ["open"],
+            "action": "ActTrap"
+        }
+        ]
+    }
+}
