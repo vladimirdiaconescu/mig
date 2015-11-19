@@ -12,6 +12,7 @@ package netstat /* import "mig.ninja/mig/modules/netstat" */
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/seccomp/libseccomp-golang"
 	"io"
 	"mig.ninja/mig/modules"
 	"net"
@@ -35,7 +36,20 @@ func (m *module) GetSandboxProfile() sandbox.SandboxProfile {
 }
 
 func init() {
-	modules.Register("netstat", new(module))
+	m := new(module)
+	sandbox := modules.SandboxProfile{
+		DefaultPolicy: seccomp.ActTrap,
+		Filters: []modules.FilterOperation{
+			modules.FilterOperation{
+				FilterOn: []string{"close", "exit_group", "futex",
+					"openat", "read", "socket", "write",
+				},
+				Action: seccomp.ActAllow,
+			},
+		},
+	}
+	m.SandboxProfile = sandbox
+	modules.Register("netstat", m)
 }
 
 type run struct {
