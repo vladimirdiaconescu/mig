@@ -41,8 +41,8 @@ func init() {
 		DefaultPolicy: seccomp.ActTrap,
 		Filters: []sandbox.FilterOperation{
 			sandbox.FilterOperation{
-				FilterOn: []string{"close", "exit_group", "futex",
-					"openat", "read", "socket", "write",
+				FilterOn: []string{"write", "read", "close",
+					"futex", "openat", "socket", "exit_group",
 				},
 				Action: seccomp.ActAllow,
 			},
