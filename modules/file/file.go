@@ -33,6 +33,7 @@ import (
 
 	"golang.org/x/crypto/sha3"
 	"mig.ninja/mig/modules"
+	"github.com/seccomp/libseccomp-golang"
 )
 
 var debug bool = false
@@ -56,7 +57,40 @@ func (m *module) GetSandboxProfile() modules.SandboxProfile {
 }
 
 func init() {
-	modules.Register("file", new(module))
+	m := new(module)
+	sandbox := modules.SandboxProfile{
+		DefaultPolicy: seccomp.ActTrap,
+		Filters: []modules.FilterOperation{
+			modules.FilterOperation{
+				FilterOn: []string{
+					"pread64",
+					"lstat",
+					"close",
+					"openat",
+					"stat",
+					"readlinkat",
+					"write",
+					"mmap", // GO
+					"futex", // GO
+					"getdents64",
+					"read",
+					"sigaltstack", // GO
+					"gettid", // GO
+					"set_robust_list", // GO
+					"clone", // GO
+					"sched_yield", // GO
+
+					// Used for pretty printing the violating syscall (rare)
+					"exit_group", // Sandbox
+					"rt_sigreturn", // Sandbox
+
+				},
+				Action: seccomp.ActAllow,
+			},
+		},
+	}
+	m.SandboxProfile = sandbox
+	modules.Register("file", m)
 }
 
 type run struct {
