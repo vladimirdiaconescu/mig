@@ -47,16 +47,23 @@ func init() {
 		Filters: []modules.FilterOperation{
 			modules.FilterOperation{
 				FilterOn: []string{
-					"read",
-					"mmap",
-					"futex",
 					"openat",
-					"getdents64",
-					"lstat",
 					"close",
+					"pread64",
+					"read",
+					"futex",
+					"lstat",
+					"sched_yield", // GO
+					"readlinkat",
+					"write",
+					"mmap",
+					"sigaltstack", // GO
+					"gettid", // GO
+					"set_robust_list", // GO
+					"getdents64",
+					"clone", // GO
 
 					// Used for pretty printing the violating syscall (rare)
-					"write",
 					"exit_group",
 					"rt_sigreturn",
 
