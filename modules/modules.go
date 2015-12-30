@@ -14,7 +14,6 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"github.com/seccomp/libseccomp-golang"
 	"io"
 )
 
@@ -56,17 +55,7 @@ type Result struct {
 	Errors        []string    `json:"errors"`
 }
 
-type FilterAction string
 
-type FilterOperation struct {
-	FilterOn []string
-	Action   seccomp.ScmpAction
-}
-
-type SandboxProfile struct {
-	DefaultPolicy seccomp.ScmpAction
-	Filters       []FilterOperation
-}
 
 // Runner provides the interface to an execution of a module
 type Runner interface {
