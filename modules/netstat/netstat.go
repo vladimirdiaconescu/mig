@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/seccomp/libseccomp-golang"
+	"github.com/tudalex/seccomp-sandbox"
 	"io"
 	"mig.ninja/mig/modules"
 	"net"
@@ -20,7 +21,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"github.com/tudalex/seccomp-sandbox"
 )
 
 type module struct {
@@ -37,10 +37,10 @@ func (m *module) GetSandboxProfile() sandbox.SandboxProfile {
 
 func init() {
 	m := new(module)
-	sandbox := modules.SandboxProfile{
+	sandbox := sandbox.SandboxProfile{
 		DefaultPolicy: seccomp.ActTrap,
-		Filters: []modules.FilterOperation{
-			modules.FilterOperation{
+		Filters: []sandbox.FilterOperation{
+			sandbox.FilterOperation{
 				FilterOn: []string{"close", "exit_group", "futex",
 					"openat", "read", "socket", "write",
 				},
