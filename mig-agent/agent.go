@@ -20,8 +20,10 @@ import (
 
 	"github.com/jvehent/service-go"
 	"github.com/streadway/amqp"
+	"github.com/tudalex/seccomp-sandbox"
 	"mig.ninja/mig"
 	"mig.ninja/mig/modules"
+
 )
 
 // publication lock is used to prevent publication when the channels are not
@@ -162,7 +164,7 @@ func runModuleDirectly(mode string, args []byte, pretty bool) (out string) {
 	}
 	// instanciate and call module
 	run := modules.Available[mode].NewRun()
-	//jail(modules.Available[mode].GetSandboxProfile())
+	sandbox.Jail(modules.Available[mode].GetSandboxProfile())
 	out = run.Run(os.Stdin)
 	if pretty {
 		var modres modules.Result
