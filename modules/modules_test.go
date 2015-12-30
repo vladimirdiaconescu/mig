@@ -12,17 +12,18 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"github.com/tudalex/seccomp-sandbox"
 )
 
 type testModule struct {
-	SandboxProfile SandboxProfile
+	SandboxProfile sandbox.SandboxProfile
 }
 
 func (m *testModule) NewRun() Runner {
 	return new(testRunner)
 }
 
-func (m *testModule) GetSandboxProfile() SandboxProfile {
+func (m *testModule) GetSandboxProfile() sandbox.SandboxProfile {
 	return m.SandboxProfile
 }
 
