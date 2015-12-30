@@ -162,7 +162,7 @@ func runModuleDirectly(mode string, args []byte, pretty bool) (out string) {
 	}
 	// instanciate and call module
 	run := modules.Available[mode].NewRun()
-	jail(modules.Available[mode].GetSandboxProfile())
+	//jail(modules.Available[mode].GetSandboxProfile())
 	out = run.Run(os.Stdin)
 	if pretty {
 		var modres modules.Result

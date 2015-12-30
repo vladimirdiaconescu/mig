@@ -18,6 +18,7 @@ import (
 	"runtime"
 	"strconv"
 	"time"
+	"github.com/tudalex/seccomp-sandbox"
 )
 
 var stats statistics
@@ -36,14 +37,14 @@ func endCounters() {
 }
 
 type module struct {
-	SandboxProfile modules.SandboxProfile
+	SandboxProfile sandbox.SandboxProfile
 }
 
 func (m *module) NewRun() modules.Runner {
 	return new(run)
 }
 
-func (m *module) GetSandboxProfile() modules.SandboxProfile {
+func (m *module) GetSandboxProfile() sandbox.SandboxProfile {
 	return m.SandboxProfile
 }
 

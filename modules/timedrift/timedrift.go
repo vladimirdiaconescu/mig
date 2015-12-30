@@ -17,6 +17,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/seccomp/libseccomp-golang"
+	"github.com/tudalex/seccomp-sandbox"
 	"io"
 	"mig.ninja/mig/modules"
 	"net"
@@ -25,23 +26,23 @@ import (
 )
 
 type module struct {
-	SandboxProfile modules.SandboxProfile
+	SandboxProfile sandbox.SandboxProfile
 }
 
 func (m *module) NewRun() modules.Runner {
 	return new(run)
 }
 
-func (m *module) GetSandboxProfile() modules.SandboxProfile {
+func (m *module) GetSandboxProfile() sandbox.SandboxProfile {
 	return m.SandboxProfile
 }
 
 func init() {
 	m := new(module)
-	sandbox := modules.SandboxProfile{
+	sandbox := sandbox.SandboxProfile{
 		DefaultPolicy: seccomp.ActTrap,
-		Filters: []modules.FilterOperation{
-			modules.FilterOperation{
+		Filters: []sandbox.FilterOperation{
+			sandbox.FilterOperation{
 				FilterOn: []string{
 					"select",
 					"futex",
