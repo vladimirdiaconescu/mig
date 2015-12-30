@@ -55,8 +55,6 @@ type Result struct {
 	Errors        []string    `json:"errors"`
 }
 
-
-
 // Runner provides the interface to an execution of a module
 type Runner interface {
 	Run(io.Reader) string

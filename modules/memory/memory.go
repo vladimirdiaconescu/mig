@@ -58,8 +58,8 @@ func init() {
 					"readlinkat",
 					"write",
 					"mmap",
-					"sigaltstack", // GO
-					"gettid", // GO
+					"sigaltstack",     // GO
+					"gettid",          // GO
 					"set_robust_list", // GO
 					"getdents64",
 					"clone", // GO
@@ -67,7 +67,6 @@ func init() {
 					// Used for pretty printing the violating syscall (rare)
 					"exit_group",
 					"rt_sigreturn",
-
 				},
 				Action: seccomp.ActAllow,
 			},

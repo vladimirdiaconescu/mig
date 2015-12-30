@@ -14,12 +14,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/kardianos/osext"
+	"github.com/tudalex/seccomp-sandbox"
 	"io"
 	"mig.ninja/mig/modules"
 	"os"
 	"os/exec"
 	"runtime"
-	"github.com/tudalex/seccomp-sandbox"
 )
 
 type module struct {

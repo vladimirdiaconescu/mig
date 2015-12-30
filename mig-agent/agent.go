@@ -24,7 +24,6 @@ import (
 	"github.com/tudalex/seccomp-sandbox"
 	"mig.ninja/mig"
 	"mig.ninja/mig/modules"
-
 )
 
 // publication lock is used to prevent publication when the channels are not

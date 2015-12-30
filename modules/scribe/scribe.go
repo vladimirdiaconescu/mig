@@ -12,13 +12,13 @@ import (
 	"encoding/json"
 	"fmt"
 	scribelib "github.com/mozilla/scribe/src/scribe"
+	"github.com/tudalex/seccomp-sandbox"
 	"io"
 	"mig.ninja/mig/modules"
 	"mig.ninja/mig/modules/file"
 	"runtime"
 	"strconv"
 	"time"
-	"github.com/tudalex/seccomp-sandbox"
 )
 
 var stats statistics

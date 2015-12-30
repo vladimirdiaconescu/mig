@@ -31,10 +31,10 @@ import (
 	"strings"
 	"time"
 
-	"golang.org/x/crypto/sha3"
-	"mig.ninja/mig/modules"
 	"github.com/seccomp/libseccomp-golang"
 	"github.com/tudalex/seccomp-sandbox"
+	"golang.org/x/crypto/sha3"
+	"mig.ninja/mig/modules"
 )
 
 var debug bool = false
@@ -71,18 +71,18 @@ func init() {
 					"stat",
 					"readlinkat",
 					"write",
-					"mmap", // GO
+					"mmap",  // GO
 					"futex", // GO
 					"getdents64",
 					"read",
-					"sigaltstack", // GO
-					"gettid", // GO
+					"sigaltstack",     // GO
+					"gettid",          // GO
 					"set_robust_list", // GO
-					"clone", // GO
-					"sched_yield", // GO
+					"clone",           // GO
+					"sched_yield",     // GO
 
 					// Used for pretty printing the violating syscall (rare)
-					"exit_group", // Sandbox
+					"exit_group",   // Sandbox
 					"rt_sigreturn", // Sandbox
 
 				},

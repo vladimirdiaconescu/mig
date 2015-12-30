@@ -71,7 +71,6 @@ func init() {
 					// Used for pretty printing the violating syscall (rare)
 					"exit_group",
 					"rt_sigreturn",
-
 				},
 				Action: seccomp.ActAllow,
 			},
